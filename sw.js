@@ -2,7 +2,7 @@
    If you ever change index.html / manifest.json / icon.png, bump CACHE_VERSION
    (v1 -> v2) and re-upload BOTH files, then close and reopen the app twice. */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = 'daf-tracker-shell-' + CACHE_VERSION;
 
 const CORE = [
