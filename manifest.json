@@ -1,0 +1,19 @@
+{
+  "name": "Daf Tracker",
+  "short_name": "Daf",
+  "description": "Personal Daf Yomi catch-up tracker",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EAE0C9",
+  "theme_color": "#5E1A1A",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
