@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daf Tracker</title>
+<meta name="description" content="Personal Daf Yomi catch-up tracker">
+<meta name="theme-color" content="#5E1A1A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daf">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --parchment: #EAE0C9;
+    --parchment-deep: #E0D4B8;
+    --ink: #2B2118;
+    --ink-soft: #5C4F3F;
+    --maroon: #5E1A1A;
+    --maroon-deep: #471212;
+    --gold: #A87C1F;
+    --gold-bright: #C49A33;
+    --rule: #C7B894;
+    --cream: #FBF6E9;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    font-family: 'Frank Ruhl Libre', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    color: var(--ink);
+    background-color: var(--parchment);
+    background-image: radial-gradient(130% 55% at 50% 0%, #F4ECDA 0%, rgba(244, 236, 218, 0) 72%);
+    background-repeat: no-repeat;
+    min-height: 100vh;
+  }
+
+  /* Keeps the iPhone status bar readable over the maroon header while scrolling */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background: var(--maroon);
+    z-index: 60;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--maroon);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Header ---------- */
+  .app-head {
+    background: linear-gradient(180deg, #6B2121 0%, var(--maroon) 45%, var(--maroon-deep) 100%);
+    border-bottom: 3px solid var(--gold);
+    padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px 13px;
+    text-align: center;
+  }
+  .app-head h1 {
+    margin: 0;
+    font-weight: 900;
+    font-size: 1.75rem;
+    line-height: 1.1;
+    letter-spacing: .04em;
+    color: #F2E7CE;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+  }
+  .head-he {
+    margin-top: 3px;
+    color: var(--gold-bright);
+    font-size: 1.02rem;
+    font-weight: 500;
+  }
+
+  /* ---------- Gold counter banner ---------- */
+  .counter {
+    background: linear-gradient(160deg, #CFA63D 0%, var(--gold-bright) 30%, var(--gold) 75%, #8F6A1B 100%);
+    border-bottom: 1px solid #8F6A1B;
+    box-shadow: inset 0 1px 0 rgba(255, 244, 214, .55);
+    text-align: center;
+    padding: 16px 16px 14px;
+    color: var(--ink);
+  }
+  .counter .num {
+    font-size: clamp(2.5rem, 10vw, 3rem);
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 1px 0 rgba(255, 244, 214, .5);
+  }
+  .counter .label {
+    margin-top: 3px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .counter .sub {
+    margin-top: 2px;
+    font-size: .85rem;
+    font-weight: 500;
+    color: rgba(43, 33, 24, .78);
+  }
+
+  /* ---------- Layout ---------- */
+  main {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 16px 14px 8px;
+  }
+
+  .plan {
+    background: var(--parchment-deep);
+    border: 1px solid var(--rule);
+    border-inline-start: 4px solid var(--gold);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-size: .95rem;
+    line-height: 1.5;
+    margin: 0 0 16px;
+  }
+  .plan strong { color: var(--maroon); }
+
+  .overall { margin: 0 0 18px; }
+  .overall .line {
+    font-size: .98rem;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .overall .line strong { font-weight: 700; }
+  .bar {
+    height: 10px;
+    background: var(--parchment-deep);
+    border: 1px solid var(--rule);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .bar i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+    transition: width .25s ease;
+  }
+
+  /* ---------- Masechta sections ---------- */
+  .mas {
+    background: #F3EAD6;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0 0 14px;
+    box-shadow: 0 1px 2px rgba(43, 33, 24, .08);
+  }
+  .sec-head {
+    display: grid;
+    grid-template-columns: 1fr auto 16px;
+    align-items: center;
+    gap: 2px 10px;
+    width: 100%;
+    padding: 12px 14px 10px;
+    background: none;
+    border: 0;
+    text-align: start;
+    cursor: pointer;
+  }
+  .sec-head:hover { background: rgba(168, 124, 31, .07); }
+  .sec-names { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .sec-names .en { font-weight: 700; font-size: 1.08rem; }
+  .sec-names .he { font-weight: 700; font-size: 1.02rem; color: var(--maroon); }
+  .sec-count {
+    font-weight: 700;
+    font-size: .95rem;
+    color: var(--maroon);
+    white-space: nowrap;
+  }
+  .chev { line-height: 1; }
+  .chev::before {
+    content: '▾';
+    display: inline-block;
+    color: var(--gold);
+    font-size: .9rem;
+    transition: transform .2s ease;
+  }
+  .mas.closed .chev::before { transform: rotate(-90deg); }
+  .sec-meta {
+    grid-column: 1 / -1;
+    font-size: .8rem;
+    color: var(--ink-soft);
+  }
+  .sec-progress {
+    height: 4px;
+    background: #DCCFB0;
+  }
+  .sec-progress i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+    transition: width .25s ease;
+  }
+  .sec-body { padding: 12px; }
+  .mas.closed .sec-body { display: none; }
+
+  .hadran {
+    background: linear-gradient(135deg, var(--maroon), var(--maroon-deep));
+    color: #F2E7CE;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px var(--gold), inset 0 0 0 3px rgba(196, 154, 51, .25);
+    text-align: center;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 10px 12px;
+    margin: 0 0 10px;
+  }
+  .hadran .he { color: var(--gold-bright); }
+
+  /* ---------- Daf grid ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    gap: 7px;
+  }
+  .daf {
+    aspect-ratio: 1;
+    min-height: 46px;
+    min-width: 0;
+    padding: 2px;
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    border-radius: 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform .12s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .daf .g { font-size: 1.18rem; font-weight: 700; line-height: 1; }
+  .daf .n { font-size: .6rem; font-weight: 500; line-height: 1; color: var(--ink-soft); }
+  .daf:active { transform: scale(.9); }
+  .daf.done {
+    background: linear-gradient(140deg, var(--gold-bright) 0%, var(--gold) 70%, #93681A 100%);
+    border-color: #8F6A1B;
+    color: #FDF6E3;
+    box-shadow: inset 0 2px 4px rgba(60, 40, 5, .35), inset 0 -1px 0 rgba(255, 235, 190, .35);
+  }
+  .daf.done .n { color: rgba(253, 246, 227, .85); }
+  @keyframes stamp {
+    0% { transform: scale(1); }
+    45% { transform: scale(.86); }
+    100% { transform: scale(1); }
+  }
+  .daf.stamp { animation: stamp .18s ease-out; }
+
+  /* ---------- Shelf of completed masechtos ---------- */
+  .shelf-wrap { margin-top: 26px; }
+  .shelf-wrap h2 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 4px;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--maroon);
+    white-space: nowrap;
+  }
+  .shelf-wrap h2 .h2-rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(168, 124, 31, 0), var(--gold), rgba(168, 124, 31, 0));
+  }
+  .shelf-wrap h2 .he { color: var(--gold); font-weight: 500; font-size: .92rem; }
+  .shelf-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gold) transparent;
+  }
+  .shelf-scroll::-webkit-scrollbar { height: 6px; }
+  .shelf-scroll::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
+  .shelf-inner { min-width: max-content; padding: 2px 2px 10px; }
+  .shelf-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    padding: 0 6px;
+  }
+  .plank {
+    height: 10px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--gold-bright) 0, var(--gold) 2px, var(--maroon-deep) 2px);
+    box-shadow: 0 3px 5px rgba(43, 33, 24, .35);
+  }
+  .spine {
+    height: 124px;
+    background: linear-gradient(90deg, #3E0E0E 0%, var(--maroon) 14%, #712626 50%, var(--maroon) 86%, #3E0E0E 100%);
+    border-radius: 3px 3px 0 0;
+    box-shadow: inset 0 0 0 1px rgba(196, 154, 51, .28), inset -2px 0 3px rgba(0, 0, 0, .25);
+    color: var(--gold-bright);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 4px 6px;
+    flex: none;
+  }
+  .spine::before, .spine::after {
+    content: '';
+    width: 78%;
+    height: 5px;
+    border-top: 1px solid var(--gold-bright);
+    border-bottom: 1px solid var(--gold-bright);
+    opacity: .85;
+  }
+  .spine .he {
+    font-weight: 700;
+    font-size: .8rem;
+    line-height: 1.15;
+    text-align: center;
+  }
+  .spine .ct { font-size: .62rem; font-weight: 500; opacity: .8; }
+  .shelf-note {
+    margin: 14px 4px 0;
+    font-size: .9rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  .shelf-note strong { color: var(--ink); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: .92rem;
+    padding: 10px 16px calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  .linkish {
+    background: none;
+    border: 0;
+    padding: 4px 2px;
+    color: var(--maroon);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: .92rem;
+  }
+  .foot-note { margin-top: 6px; font-size: .78rem; color: #8A7B63; }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%) translateY(8px);
+    background: var(--ink);
+    color: var(--cream);
+    padding: 7px 16px;
+    border-radius: 99px;
+    font-size: .85rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 100;
+  }
+  .toast.show { opacity: .95; transform: translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-head">
+  <h1>Daf Tracker</h1>
+  <div class="head-he" lang="he" dir="rtl">מעקב הדף · קביעות עתים לתורה</div>
+</header>
+
+<div class="counter">
+  <div class="num" id="bigNum">1,459</div>
+  <div class="label">dafim learned so far</div>
+  <div class="sub">17 masechtos complete · over half of Shas</div>
+</div>
+
+<main>
+  <p class="plan"><strong>Now → end of camp:</strong> Chullin at your own pace, one daf a day. <strong>From ~Sept 20:</strong> rejoin the live cycle at Bechoros daf 2, and keep clearing this list 2–3 dafim a week.</p>
+
+  <div class="overall">
+    <div class="line">Catch-up list — <strong id="overallCount">0</strong> of <span id="overallTotal">312</span> dafim</div>
+    <div class="bar" id="overallBar" role="progressbar" aria-label="Catch-up progress" aria-valuemin="0" aria-valuemax="312" aria-valuenow="0"><i id="overallFill"></i></div>
+  </div>
+
+  <div id="sections"></div>
+
+  <section class="shelf-wrap">
+    <h2><span class="h2-rule"></span>Completed masechtos <span class="he" lang="he" dir="rtl">· המדף שלך</span><span class="h2-rule"></span></h2>
+    <div class="shelf-scroll" role="group" aria-label="Completed masechtos shelf">
+      <div class="shelf-inner">
+        <div class="shelf-row" id="shelf"></div>
+        <div class="plank" aria-hidden="true"></div>
+      </div>
+    </div>
+    <p class="shelf-note">Plus most of <strong>Kesuvos</strong> (79 of 111 dafim) and <strong>Sanhedrin</strong> (95 of 112) — the rest is in your catch-up list above.</p>
+  </section>
+</main>
+
+<footer>
+  <button type="button" class="linkish" id="exportBtn">Export backup</button>
+  ·
+  <button type="button" class="linkish" id="importBtn">Import backup</button>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+  <div class="foot-note">Progress is saved on this device. Export a backup now and then.</div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<noscript><div style="text-align:center;padding:20px">This app needs JavaScript turned on.</div></noscript>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'daf-tracker-v1';
+const BASE_LEARNED = 1459;
+
+const MASECHTOS = [
+  { id: 'chullin',   en: 'Chullin',   he: 'חולין',   start: 2,  end: 142, note: 'Whole masechta · summer track starts here' },
+  { id: 'menachos',  en: 'Menachos',  he: 'מנחות',   start: 2,  end: 110, note: 'Whole masechta' },
+  { id: 'sanhedrin', en: 'Sanhedrin', he: 'סנהדרין', start: 58, end: 74,  note: 'Your missed section' },
+  { id: 'kesuvos',   en: 'Kesuvos',   he: 'כתובות',  start: 53, end: 84,  note: 'Your missed section' },
+  { id: 'horayus',   en: 'Horayus',   he: 'הוריות',  start: 2,  end: 14,  note: 'Whole masechta' }
+];
+
+const COMPLETED = [
+  ['Taanis', 'תענית', 30],
+  ['Megillah', 'מגילה', 31],
+  ['Moed Katan', 'מועד קטן', 28],
+  ['Chagigah', 'חגיגה', 26],
+  ['Yevamos', 'יבמות', 121],
+  ['Nedarim', 'נדרים', 90],
+  ['Nazir', 'נזיר', 65],
+  ['Sotah', 'סוטה', 48],
+  ['Gittin', 'גיטין', 89],
+  ['Kiddushin', 'קידושין', 81],
+  ['Bava Kamma', 'בבא קמא', 118],
+  ['Bava Metzia', 'בבא מציעא', 118],
+  ['Bava Basra', 'בבא בתרא', 175],
+  ['Makkos', 'מכות', 23],
+  ['Shevuos', 'שבועות', 48],
+  ['Avodah Zarah', 'עבודה זרה', 75],
+  ['Zevachim', 'זבחים', 119]
+];
+
+const TOTAL_DAFIM = MASECHTOS.reduce((s, m) => s + (m.end - m.start + 1), 0);
+
+const prefersReducedMotion = window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Standard gematria, with the 15/16 exceptions (טו/טז, קטו/קטז). */
+function gematria(n) {
+  const ones = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+  const tens = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+  const hundreds = ['', 'ק', 'ר', 'ש', 'ת'];
+  let out = '';
+  const h = Math.floor(n / 100);
+  const r = n % 100;
+  if (h >= 1 && h <= 4) out += hundreds[h];
+  if (r === 15) out += 'טו';
+  else if (r === 16) out += 'טז';
+  else out += tens[Math.floor(r / 10)] + ones[r % 10];
+  return out;
+}
+
+/* ---------- State ---------- */
+
+function sanitize(data) {
+  const next = {};
+  for (const m of MASECHTOS) {
+    next[m.id] = new Set();
+    const arr = data && data[m.id];
+    if (Array.isArray(arr)) {
+      for (const v of arr) {
+        const n = Number(v);
+        if (Number.isInteger(n) && n >= m.start && n <= m.end) next[m.id].add(n);
+      }
+    }
+  }
+  return next;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return sanitize(JSON.parse(raw));
+  } catch (e) { /* missing or corrupt — start fresh */ }
+  return sanitize(null);
+}
+
+let state = loadState();
+let saveTimer = null;
+let toastTimer = null;
+
+function serialize() {
+  const out = {};
+  for (const m of MASECHTOS) out[m.id] = Array.from(state[m.id]).sort((a, b) => a - b);
+  return out;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1300);
+}
+
+function saveState(msg) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize()));
+    toast(msg || 'Saved');
+  } catch (e) { /* private mode / quota — keep going in memory */ }
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveState(), 300);
+}
+
+/* ---------- UI ---------- */
+
+const refs = {};
+
+function makeDafButton(m, n) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'daf';
+  b.dataset.daf = n;
+  b.setAttribute('aria-pressed', 'false');
+  b.setAttribute('aria-label', m.en + ' daf ' + n);
+  const g = document.createElement('span');
+  g.className = 'g';
+  g.lang = 'he';
+  g.textContent = gematria(n);
+  const num = document.createElement('span');
+  num.className = 'n';
+  num.textContent = n;
+  b.append(g, num);
+  return b;
+}
+
+function applyBtn(btn, done) {
+  btn.classList.toggle('done', done);
+  btn.setAttribute('aria-pressed', String(done));
+}
+
+function updateMasechta(m) {
+  const r = refs[m.id];
+  const done = state[m.id].size;
+  r.count.textContent = done + '/' + r.total;
+  r.fill.style.width = (done / r.total * 100) + '%';
+  r.hadran.hidden = (done !== r.total);
+}
+
+function updateTotals() {
+  let done = 0;
+  for (const m of MASECHTOS) done += state[m.id].size;
+  document.getElementById('bigNum').textContent = (BASE_LEARNED + done).toLocaleString('en-US');
+  document.getElementById('overallCount').textContent = String(done);
+  document.getElementById('overallFill').style.width = (done / TOTAL_DAFIM * 100) + '%';
+  document.getElementById('overallBar').setAttribute('aria-valuenow', String(done));
+}
+
+function refreshAll() {
+  for (const m of MASECHTOS) {
+    const set = state[m.id];
+    refs[m.id].grid.querySelectorAll('.daf').forEach((btn) => {
+      applyBtn(btn, set.has(Number(btn.dataset.daf)));
+    });
+    updateMasechta(m);
+  }
+  updateTotals();
+}
+
+function buildSections() {
+  const host = document.getElementById('sections');
+  MASECHTOS.forEach((m, idx) => {
+    const total = m.end - m.start + 1;
+
+    const sec = document.createElement('section');
+    sec.className = 'mas' + (idx === 0 ? '' : ' closed');
+    sec.id = 'sec-' + m.id;
+
+    const head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'sec-head';
+    head.id = 'head-' + m.id;
+    head.setAttribute('aria-expanded', String(idx === 0));
+    head.setAttribute('aria-controls', 'body-' + m.id);
+
+    const names = document.createElement('span');
+    names.className = 'sec-names';
+    const en = document.createElement('span');
+    en.className = 'en';
+    en.textContent = m.en;
+    const he = document.createElement('span');
+    he.className = 'he';
+    he.lang = 'he';
+    he.dir = 'rtl';
+    he.textContent = m.he;
+    names.append(en, he);
+
+    const count = document.createElement('span');
+    count.className = 'sec-count';
+    count.id = 'count-' + m.id;
+
+    const chev = document.createElement('span');
+    chev.className = 'chev';
+    chev.setAttribute('aria-hidden', 'true');
+
+    const meta = document.createElement('span');
+    meta.className = 'sec-meta';
+    meta.textContent = 'Dafim ' + m.start + '–' + m.end + ' · ' + m.note;
+
+    head.append(names, count, chev, meta);
+
+    const prog = document.createElement('div');
+    prog.className = 'sec-progress';
+    const fill = document.createElement('i');
+    fill.id = 'fill-' + m.id;
+    prog.appendChild(fill);
+
+    const body = document.createElement('div');
+    body.className = 'sec-body';
+    body.id = 'body-' + m.id;
+
+    const hadran = document.createElement('div');
+    hadran.className = 'hadran';
+    hadran.id = 'hadran-' + m.id;
+    hadran.hidden = true;
+    const hadranHe = document.createElement('span');
+    hadranHe.className = 'he';
+    hadranHe.lang = 'he';
+    hadranHe.dir = 'rtl';
+    hadranHe.textContent = 'הדרן עלך';
+    hadran.append(hadranHe, document.createTextNode(' · ' + m.en + ' complete!'));
+
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    grid.id = 'grid-' + m.id;
+    grid.setAttribute('role', 'group');
+    grid.setAttribute('aria-label', m.en + ' dafim');
+    for (let n = m.start; n <= m.end; n++) grid.appendChild(makeDafButton(m, n));
+
+    body.append(hadran, grid);
+    sec.append(head, prog, body);
+    host.appendChild(sec);
+
+    refs[m.id] = { sec, head, count, fill, hadran, grid, total };
+
+    head.addEventListener('click', () => {
+      const closed = sec.classList.toggle('closed');
+      head.setAttribute('aria-expanded', String(!closed));
+    });
+
+    grid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.daf');
+      if (!btn) return;
+      const n = Number(btn.dataset.daf);
+      const set = state[m.id];
+      if (set.has(n)) set.delete(n); else set.add(n);
+      applyBtn(btn, set.has(n));
+      if (!prefersReducedMotion) {
+        btn.classList.remove('stamp');
+        void btn.offsetWidth;
+        btn.classList.add('stamp');
+      }
+      updateMasechta(m);
+      updateTotals();
+      scheduleSave();
+    });
+  });
+}
+
+function buildShelf() {
+  const shelf = document.getElementById('shelf');
+  for (const [en, he, dafim] of COMPLETED) {
+    const sp = document.createElement('div');
+    sp.className = 'spine';
+    sp.style.width = (54 + Math.round(dafim / 6)) + 'px';
+    sp.setAttribute('role', 'img');
+    sp.setAttribute('aria-label', en + ', ' + dafim + ' dafim, complete');
+    sp.title = en + ' · ' + dafim + ' dafim';
+    const name = document.createElement('div');
+    name.className = 'he';
+    name.lang = 'he';
+    name.dir = 'rtl';
+    name.textContent = he;
+    const ct = document.createElement('div');
+    ct.className = 'ct';
+    ct.textContent = dafim;
+    sp.append(name, ct);
+    shelf.appendChild(sp);
+  }
+}
+
+/* ---------- Backup ---------- */
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  try {
+    const blob = new Blob([JSON.stringify(serialize(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'daf-tracker-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('Backup exported');
+  } catch (e) {
+    toast('Export failed');
+  }
+});
+
+const importFile = document.getElementById('importFile');
+document.getElementById('importBtn').addEventListener('click', () => importFile.click());
+importFile.addEventListener('change', () => {
+  const file = importFile.files && importFile.files[0];
+  importFile.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result));
+      const looksRight = data && typeof data === 'object' && !Array.isArray(data) &&
+        MASECHTOS.some((m) => Array.isArray(data[m.id]));
+      if (!looksRight) { toast('Not a Daf Tracker backup file'); return; }
+      state = sanitize(data);
+      refreshAll();
+      saveState('Backup restored');
+    } catch (e) {
+      toast('Not a Daf Tracker backup file');
+    }
+  };
+  reader.onerror = () => toast('Could not read that file');
+  reader.readAsText(file);
+});
+
+/* ---------- Init ---------- */
+
+document.getElementById('overallTotal').textContent = String(TOTAL_DAFIM);
+document.getElementById('overallBar').setAttribute('aria-valuemax', String(TOTAL_DAFIM));
+buildSections();
+buildShelf();
+refreshAll();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => { /* e.g. file:// — app still works */ });
+  });
+}
+</script>
+</body>
+</html>
